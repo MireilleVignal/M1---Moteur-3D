@@ -18,6 +18,11 @@ struct Vect2
 	int x;
 	int y;
 
+	Vect2() {
+		x = 0;
+		y = 0;
+	}
+
 	Vect2(int a, int b)
 	{
 		x = a;
@@ -139,7 +144,7 @@ void inverseMatrice(Vect3 mat[3], Vect3 result[3])
 	transposerMatrice(inv, result);
 }
 
-Vect3 multMatrice(Vect3 tri[3], Vect3 p)
+Vect3 baricentricCoordinates(Vect3 tri[3], Vect3 p)
 {
 	double x, y, z;
 
@@ -178,7 +183,7 @@ void triangle(Vect3 a, Vect3 b, Vect3 c, TGAImage &image, TGAColor color, float 
 		for (int j = minx; j < maxx; j++)
 		{
 			Vect3 P = Vect3(j, i, 1);
-			Vect3 baricentre = multMatrice(tri, P);
+			Vect3 baricentre = baricentricCoordinates(tri, P);
 			if (baricentre.x < 0 || baricentre.y < 0 || baricentre.z < 0)
 			{
 				continue;
@@ -198,6 +203,54 @@ void triangle(Vect3 a, Vect3 b, Vect3 c, TGAImage &image, TGAColor color, float 
 	}
 }
 
+
+void triangle(Vect3 a, Vect3 b, Vect3 c, Vect2 vt[3], TGAImage &image, TGAImage &texture, float *zbuffer)
+{
+	//Max x
+	int maxx = std::max(a.x, std::max(b.x, c.x));
+
+	//Max y
+	int maxy = std::max(a.y, std::max(b.y, c.y));
+
+	//Min x
+	int minx = std::min(a.x, std::min(b.x, c.x));
+
+	//Min y
+	int miny = std::min(a.y, std::min(b.y, c.y));
+
+	//Matrices
+	Vect3 tri[3] = {{a.x, b.x, c.x}, {a.y, b.y, c.y}, {1, 1, 1}};
+
+	//Remplissage du triangle
+	for (int i = maxy; i > miny; i--)
+	{
+		for (int j = minx; j < maxx; j++)
+		{
+			Vect3 P = Vect3(j, i, 1);
+			Vect3 baricentre = baricentricCoordinates(tri, P);
+			if (baricentre.x < 0 || baricentre.y < 0 || baricentre.z < 0)
+			{
+				continue;
+			}
+
+			P.z = 0;
+			P.z += a.z * baricentre.x;
+			P.z += b.z * baricentre.y;
+			P.z += c.z * baricentre.z;
+
+			if (zbuffer[int(P.x + P.y * width)] < P.z)
+			{
+				zbuffer[int(P.x + P.y * width)] = P.z;
+
+				int u = vt[0].x * baricentre.x + vt[1].x * baricentre.y + vt[2].x * baricentre.z;
+				int v = vt[0].y * baricentre.x + vt[1].y * baricentre.y + vt[2].y * baricentre.z;
+				
+				TGAColor color = texture.get(u,v);
+				image.set(P.x, P.y, color);
+			}
+		}
+	}
+}
 int main(int argc, char **argv)
 {
 	/*TGAImage image(100, 100, TGAImage::RGB);
@@ -212,6 +265,11 @@ int main(int argc, char **argv)
 
 	model = new Model("obj/african_head.obj");
 
+	TGAImage texture;
+	texture.read_tga_file("./obj/african_head_diffuse.tga");
+	texture.flip_vertically();
+
+
 	TGAImage image(width, height, TGAImage::RGB);
 	float zbuffer[width * height];
 	for (int i = 0; i < width * height; i++)
@@ -224,8 +282,8 @@ int main(int argc, char **argv)
 		std::vector<int> face = model->face(i);
 
 		Vec3f v0 = model->vert(face[0]);
-		Vec3f v1 = model->vert(face[(1) % 3]);
-		Vec3f v2 = model->vert(face[(2) % 3]);
+		Vec3f v1 = model->vert(face[(2) % 6]);
+		Vec3f v2 = model->vert(face[(4) % 6]);
 
 		int x0 = (v0.x + 1.) * width / 2.;
 		int y0 = (v0.y + 1.) * height / 2.;
@@ -234,7 +292,17 @@ int main(int argc, char **argv)
 		int x2 = (v2.x + 1.) * width / 2;
 		int y2 = (v2.y + 1.) * height / 2;
 
-		triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255), zbuffer);
+		Vec3f tmp1 = model->vt(face[1]);
+		Vec3f tmp2 = model->vt(face[3]);
+		Vec3f tmp3 = model->vt(face[5]);
+
+		Vect2 vt[3];
+		vt[0] = {tmp1.x * texture.get_width(), tmp1.y * texture.get_height()};
+		vt[1] = {tmp2.x * texture.get_width(), tmp2.y * texture.get_height()};
+		vt[2] = {tmp3.x * texture.get_width(), tmp3.y * texture.get_height()};
+
+		//triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255), zbuffer);
+		triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), vt, image, texture, zbuffer);
 	}
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
