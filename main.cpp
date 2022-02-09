@@ -301,8 +301,14 @@ int main(int argc, char **argv)
 		vt[1] = {tmp2.x * texture.get_width(), tmp2.y * texture.get_height()};
 		vt[2] = {tmp3.x * texture.get_width(), tmp3.y * texture.get_height()};
 
+		//Projection
+		Vect3 a = Vect3(x0/(1-v0.z/10), y0/(1-v0.z/10), v0.z/(1-v0.z/10));
+		Vect3 b = Vect3(x1/(1-v1.z/10), y1/(1-v1.z/10), v1.z/(1-v1.z/10));
+		Vect3 c = Vect3(x2/(1-v2.z/10), y2/(1-v2.z/10), v2.z/(1-v2.z/10));
+
 		//triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255), zbuffer);
-		triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), vt, image, texture, zbuffer);
+		//triangle(Vect3(x0, y0, v0.z * 1000), Vect3(x1, y1, v1.z * 1000), Vect3(x2, y2, v2.z * 1000), vt, image, texture, zbuffer);
+		triangle(a, b, c, vt, image, texture, zbuffer);
 	}
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
