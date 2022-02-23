@@ -220,11 +220,12 @@ void triangle(Vect3 a, Vect3 b, Vect3 c, Vect2 vt[3], TGAImage &image, TGAImage 
 
 	//Matrices
 	Vect3 tri[3] = {{a.x, b.x, c.x}, {a.y, b.y, c.y}, {1, 1, 1}};
+	TGAColor color = {rand()%255, rand()%255, rand()%255, 255};
 
 	//Remplissage du triangle
-	for (int i = maxy; i > miny; i--)
+	for (int i = maxy; i >= miny; i--)
 	{
-		for (int j = minx; j < maxx; j++)
+		for (int j = minx; j <= maxx; j++)
 		{
 			Vect3 P = Vect3(j, i, 1);
 			Vect3 baricentre = baricentricCoordinates(tri, P);
